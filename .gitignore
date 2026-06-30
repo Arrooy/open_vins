@@ -1,6 +1,7 @@
 cmake-build-*
 build
 Build
+install/
 *.*~
 .idea
 doxgen_generated

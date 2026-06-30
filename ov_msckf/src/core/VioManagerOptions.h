@@ -399,6 +399,13 @@ struct VioManagerOptions {
   /// If we should use KLT tracking, or descriptor matcher
   bool use_klt = true;
 
+  /// If we should seed the KLT temporal track with a gyro-predicted feature location.
+  /// Integrates the gyroscope between consecutive frames to warp each previous keypoint
+  /// through the rotation homography K*R*K^-1, giving optical flow a far better initial
+  /// guess under fast rotation / wide-FOV motion. Falls back to the identity guess when
+  /// no IMU is available for the interval. (Fork addition; off by default.)
+  bool use_gyro_aided_klt = false;
+
   /// If should extract aruco tags and estimate them
   bool use_aruco = true;
 
@@ -454,6 +461,7 @@ struct VioManagerOptions {
     if (parser != nullptr) {
       parser->parse_config("use_stereo", use_stereo);
       parser->parse_config("use_klt", use_klt);
+      parser->parse_config("use_gyro_aided_klt", use_gyro_aided_klt, false);
       parser->parse_config("use_aruco", use_aruco);
       parser->parse_config("downsize_aruco", downsize_aruco);
       parser->parse_config("downsample_cameras", downsample_cameras);
@@ -486,6 +494,7 @@ struct VioManagerOptions {
     PRINT_DEBUG("FEATURE TRACKING PARAMETERS:\n");
     PRINT_DEBUG("  - use_stereo: %d\n", use_stereo);
     PRINT_DEBUG("  - use_klt: %d\n", use_klt);
+    PRINT_DEBUG("  - use_gyro_aided_klt: %d\n", use_gyro_aided_klt);
     PRINT_DEBUG("  - use_aruco: %d\n", use_aruco);
     PRINT_DEBUG("  - downsize aruco: %d\n", downsize_aruco);
     PRINT_DEBUG("  - downsize cameras: %d\n", downsample_cameras);

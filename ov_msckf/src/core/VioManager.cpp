@@ -139,6 +139,18 @@ VioManager::VioManager(VioManagerOptions &params_) : thread_init_running(false),
         params.fast_threshold, params.grid_x, params.grid_y, params.min_px_dist, params.knn_ratio));
   }
 
+  // Enable gyro-aided KLT seeding: hand the tracker the IMU→camera rotations so it can
+  // warp the previous keypoints through the inter-frame gyro rotation. R_ItoC comes from
+  // the camera extrinsics (calib_IMUtoCAM->Rot() is exactly R_ItoC).
+  if (params.use_klt && params.use_gyro_aided_klt) {
+    std::map<size_t, Eigen::Matrix3d> R_ItoC;
+    for (int i = 0; i < state->_options.num_cameras; i++) {
+      R_ItoC[(size_t)i] = state->_calib_IMUtoCAM.at(i)->Rot();
+    }
+    trackFEATS->set_gyro_prediction(R_ItoC);
+    PRINT_INFO("[KLT]: gyro-aided KLT seeding ENABLED for %d camera(s)\n", state->_options.num_cameras);
+  }
+
   // Initialize our aruco tag extractor
   if (params.use_aruco) {
     trackARUCO = std::shared_ptr<TrackBase>(new TrackAruco(state->_cam_intrinsics_cameras, state->_options.max_aruco_features,
@@ -175,6 +187,10 @@ void VioManager::feed_measurement_imu(const ov_core::ImuData &message) {
     oldest_time = message.timestamp - params.init_options.init_window_time + state->_calib_dt_CAMtoIMU->value()(0) - 0.10;
   }
   propagator->feed_imu(message, oldest_time);
+
+  // Feed the gyro to the feature tracker so it can predict the KLT seed under rotation.
+  // No-op unless gyro-aided KLT was enabled at construction; cheap buffer push otherwise.
+  trackFEATS->feed_imu(message.timestamp, message.wm);
 
   // Push back to our initializer
   if (!is_initialized_vio) {

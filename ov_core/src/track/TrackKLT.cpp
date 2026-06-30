@@ -119,6 +119,7 @@ void TrackKLT::feed_monocular(const CameraData &message, size_t msg_id) {
     img_mask_last[cam_id] = mask;
     pts_last[cam_id] = good_left;
     ids_last[cam_id] = good_ids_left;
+    time_last[cam_id] = message.timestamp;
     return;
   }
 
@@ -130,9 +131,13 @@ void TrackKLT::feed_monocular(const CameraData &message, size_t msg_id) {
   perform_detection_monocular(img_pyramid_last[cam_id], img_mask_last[cam_id], pts_left_old, ids_left_old);
   rT3 = boost::posix_time::microsec_clock::local_time();
 
-  // Our return success masks, and predicted new features
+  // Our return success masks, and predicted new features. By default the optical-flow
+  // initial guess is the previous pixel location; when gyro prediction is enabled we warp
+  // each point through the inter-frame rotation for a far better seed under fast motion.
   std::vector<uchar> mask_ll;
   std::vector<cv::KeyPoint> pts_left_new = pts_left_old;
+  double time_prev = time_last.count(cam_id) ? time_last[cam_id] : -1.0;
+  predict_keypoints(cam_id, time_prev, message.timestamp, pts_left_old, pts_left_new);
 
   // Lets track temporally
   perform_matching(img_pyramid_last[cam_id], imgpyr, pts_left_old, pts_left_new, cam_id, cam_id, mask_ll);
@@ -147,6 +152,7 @@ void TrackKLT::feed_monocular(const CameraData &message, size_t msg_id) {
     img_mask_last[cam_id] = mask;
     pts_last[cam_id].clear();
     ids_last[cam_id].clear();
+    time_last[cam_id] = message.timestamp;
     PRINT_ERROR(RED "[KLT-EXTRACTOR]: Failed to get enough points to do RANSAC, resetting.....\n" RESET);
     return;
   }
@@ -186,6 +192,7 @@ void TrackKLT::feed_monocular(const CameraData &message, size_t msg_id) {
     img_mask_last[cam_id] = mask;
     pts_last[cam_id] = good_left;
     ids_last[cam_id] = good_ids_left;
+    time_last[cam_id] = message.timestamp;
   }
   rT5 = boost::posix_time::microsec_clock::local_time();
 

@@ -147,6 +147,9 @@ protected:
   std::map<size_t, std::vector<cv::Mat>> img_pyramid_last;
   std::map<size_t, cv::Mat> img_curr;
   std::map<size_t, std::vector<cv::Mat>> img_pyramid_curr;
+
+  // Timestamp of the last processed image per camera (for gyro-aided KLT seeding)
+  std::map<size_t, double> time_last;
 };
 
 } // namespace ov_core

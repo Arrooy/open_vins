@@ -28,7 +28,9 @@
 #include <thread>
 #include <unordered_map>
 
+#include <Eigen/Dense>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <map>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
@@ -97,6 +99,27 @@ public:
   virtual void feed_new_camera(const CameraData &message) = 0;
 
   /**
+   * @brief Feed a gyroscope reading used to predict the KLT temporal track seed.
+   *
+   * Buffers (timestamp, angular velocity) so the tracker can integrate the rotation
+   * between two consecutive frames and warp the previous keypoints into the new image
+   * as the optical-flow initial guess. Only used when gyro prediction is enabled via
+   * @ref set_gyro_prediction. Cheap; safe to always call. Thread-safe.
+   *
+   * @param timestamp Sensor time of the reading (same clock as the camera timestamps)
+   * @param wm Angular velocity in the IMU frame (rad/s)
+   */
+  void feed_imu(double timestamp, const Eigen::Vector3d &wm);
+
+  /**
+   * @brief Enable gyro-aided KLT seeding and provide the IMU→camera rotations.
+   * @param R_ItoC_in Map of camera id → rotation that takes a vector from the IMU frame
+   *                  to that camera frame (R_ItoC). Used to express the integrated gyro
+   *                  rotation in the camera frame before warping pixels.
+   */
+  void set_gyro_prediction(const std::map<size_t, Eigen::Matrix3d> &R_ItoC_in);
+
+  /**
    * @brief Shows features extracted in the last image
    * @param img_out image to which we will overlayed features on
    * @param r1,g1,b1 first color to draw in
@@ -152,6 +175,26 @@ public:
   void set_num_features(int _num_features) { num_features = _num_features; }
 
 protected:
+  /**
+   * @brief Predict where the given keypoints land in the new frame using buffered gyro.
+   *
+   * Integrates the gyroscope over (time0, time1], rotates the rotation vector into the
+   * camera frame (R_ItoC), and warps each keypoint through the rotation: undistort to a
+   * unit bearing, apply R_C1fromC0 = exp(-theta_cam), reproject and distort. This is an
+   * initial guess only — KLT refines it. Returns false (leaving @p pts1 untouched) when
+   * prediction is unavailable: gyro disabled, no extrinsic for the camera, bad interval,
+   * or no IMU samples in the window.
+   *
+   * @param cam_id Camera the keypoints belong to
+   * @param time0 Timestamp of the previous frame
+   * @param time1 Timestamp of the current frame
+   * @param pts0 Keypoints in the previous image
+   * @param[out] pts1 Predicted keypoints in the current image (same size/order as pts0)
+   * @return true if a prediction was written into @p pts1
+   */
+  bool predict_keypoints(size_t cam_id, double time0, double time1, const std::vector<cv::KeyPoint> &pts0,
+                         std::vector<cv::KeyPoint> &pts1);
+
   /// Camera object which has all calibration in it
   std::unordered_map<size_t, std::shared_ptr<CamBase>> camera_calib;
 
@@ -190,6 +233,19 @@ protected:
 
   /// Master ID for this tracker (atomic to allow for multi-threading)
   std::atomic<size_t> currid;
+
+  // ── Gyro-aided KLT seeding (fork addition) ───────────────────────────────────
+  /// If gyro prediction of the KLT seed is enabled (set by set_gyro_prediction)
+  bool use_gyro_prediction = false;
+
+  /// IMU→camera rotation per camera id (R_ItoC), used to warp gyro into the cam frame
+  std::map<size_t, Eigen::Matrix3d> R_ItoC;
+
+  /// Buffered gyro samples (timestamp, angular velocity in IMU frame), time-ordered
+  std::vector<std::pair<double, Eigen::Vector3d>> gyro_buffer;
+
+  /// Mutex protecting gyro_buffer
+  std::mutex mtx_gyro;
 
   // Timing variables (most children use these...)
   boost::posix_time::ptime rT1, rT2, rT3, rT4, rT5, rT6, rT7;

@@ -21,9 +21,12 @@
 
 #include "TrackBase.h"
 
+#include <algorithm>
+
 #include "cam/CamBase.h"
 #include "feat/Feature.h"
 #include "feat/FeatureDatabase.h"
+#include "utils/quat_ops.h"
 
 using namespace ov_core;
 
@@ -38,6 +41,73 @@ TrackBase::TrackBase(std::unordered_map<size_t, std::shared_ptr<CamBase>> camera
     std::vector<std::mutex> list(camera_calib.size());
     mtx_feeds.swap(list);
   }
+}
+
+void TrackBase::feed_imu(double timestamp, const Eigen::Vector3d &wm) {
+  std::lock_guard<std::mutex> lck(mtx_gyro);
+  gyro_buffer.emplace_back(timestamp, wm);
+  // Keep the buffer bounded: drop samples older than a couple seconds. We only ever
+  // integrate across one inter-frame interval, so a small window is plenty.
+  const double keep_window = 2.0;
+  if (gyro_buffer.size() > 4 && gyro_buffer.back().first - gyro_buffer.front().first > keep_window) {
+    double cutoff = gyro_buffer.back().first - keep_window;
+    auto it = std::lower_bound(gyro_buffer.begin(), gyro_buffer.end(), cutoff,
+                               [](const std::pair<double, Eigen::Vector3d> &a, double t) { return a.first < t; });
+    if (it != gyro_buffer.begin())
+      gyro_buffer.erase(gyro_buffer.begin(), it);
+  }
+}
+
+void TrackBase::set_gyro_prediction(const std::map<size_t, Eigen::Matrix3d> &R_ItoC_in) {
+  R_ItoC = R_ItoC_in;
+  use_gyro_prediction = true;
+}
+
+bool TrackBase::predict_keypoints(size_t cam_id, double time0, double time1, const std::vector<cv::KeyPoint> &pts0,
+                                  std::vector<cv::KeyPoint> &pts1) {
+
+  // Bail out unless prediction is enabled and we have an extrinsic + sane interval.
+  if (!use_gyro_prediction || R_ItoC.find(cam_id) == R_ItoC.end())
+    return false;
+  double dt = time1 - time0;
+  if (time0 <= 0.0 || dt <= 0.0 || dt > 0.5)
+    return false;
+
+  // Integrate the gyro over (time0, time1] to get the body-frame rotation vector.
+  // A simple sample-mean * dt is enough for an optical-flow seed.
+  Eigen::Vector3d w_sum = Eigen::Vector3d::Zero();
+  int n = 0;
+  {
+    std::lock_guard<std::mutex> lck(mtx_gyro);
+    for (const auto &s : gyro_buffer) {
+      if (s.first > time0 && s.first <= time1) {
+        w_sum += s.second;
+        n++;
+      }
+    }
+  }
+  if (n == 0)
+    return false;
+  Eigen::Vector3d theta_imu = (w_sum / (double)n) * dt; // rotation vector in IMU frame
+
+  // Express the rotation in the camera frame and build R_{C1 from C0} = exp(-theta_cam).
+  // Derivation: with R_GfromC1 = R_GfromC0 * exp(theta_cam), a bearing fixed in the world
+  // maps as b_C1 = exp(-theta_cam) * b_C0.
+  Eigen::Vector3d theta_cam = R_ItoC.at(cam_id) * theta_imu;
+  Eigen::Matrix3d R_C1fromC0 = exp_so3(-theta_cam);
+
+  // Warp each keypoint: undistort to a unit bearing, rotate, reproject + distort.
+  std::shared_ptr<CamBase> cam = camera_calib.at(cam_id);
+  pts1 = pts0;
+  for (size_t i = 0; i < pts0.size(); i++) {
+    cv::Point2f n0 = cam->undistort_cv(pts0[i].pt); // normalized (z = 1 plane)
+    Eigen::Vector3d b1 = R_C1fromC0 * Eigen::Vector3d(n0.x, n0.y, 1.0);
+    if (b1.z() <= 1e-6)
+      continue; // behind the camera after rotation — keep the identity guess
+    cv::Point2f n1((float)(b1.x() / b1.z()), (float)(b1.y() / b1.z()));
+    pts1[i].pt = cam->distort_cv(n1);
+  }
+  return true;
 }
 
 void TrackBase::display_active(cv::Mat &img_out, int r1, int g1, int b1, int r2, int g2, int b2, std::string overlay) {
