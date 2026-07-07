@@ -116,7 +116,7 @@ SimulatorInit::SimulatorInit(InertialInitializerOptions &params_) {
   hist_true_bias_gyro.push_back(true_bias_gyro);
 
   // Our simulation is running
-  is_running = true;
+  isRunning = true;
 
   //===============================================================
   //===============================================================
@@ -242,7 +242,7 @@ void SimulatorInit::perturb_parameters(InertialInitializerOptions &params_) {
   }
 }
 
-bool SimulatorInit::get_state(double desired_time, Eigen::Matrix<double, 17, 1> &imustate) {
+bool SimulatorInit::getState(double desired_time, Eigen::Matrix<double, 17, 1> &imustate) {
 
   // Set to default state
   imustate.setZero();
@@ -310,7 +310,7 @@ bool SimulatorInit::get_next_imu(double &time_imu, Eigen::Vector3d &wm, Eigen::V
   // If failed, then that means we don't have any more spline
   // Thus we should stop the simulation
   if (!success_accel) {
-    is_running = false;
+    isRunning = false;
     return false;
   }
 
@@ -366,7 +366,7 @@ bool SimulatorInit::get_next_cam(double &time_cam, std::vector<int> &camids,
 
   // We have finished generating measurements
   if (!success_pose) {
-    is_running = false;
+    isRunning = false;
     return false;
   }
 

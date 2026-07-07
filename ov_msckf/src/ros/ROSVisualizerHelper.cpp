@@ -167,7 +167,7 @@ void ROSVisualizerHelper::sim_save_total_state_to_file(std::shared_ptr<State> st
     // NOTE: we record both the estimate and groundtruth with the same "true" timestamp if we are doing simulation
     Eigen::Matrix<double, 17, 1> state_gt;
     timestamp_inI = state->_timestamp + sim->get_true_parameters().calib_camimu_dt;
-    if (sim->get_state(timestamp_inI, state_gt)) {
+    if (sim->getState(timestamp_inI, state_gt)) {
       // STATE: write current true state
       of_state_gt.precision(5);
       of_state_gt.setf(std::ios::fixed, std::ios::floatfield);

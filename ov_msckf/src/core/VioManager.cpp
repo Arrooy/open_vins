@@ -186,21 +186,21 @@ void VioManager::feed_measurement_imu(const ov_core::ImuData &message) {
   if (!is_initialized_vio) {
     oldest_time = message.timestamp - params.init_options.init_window_time + state->_calib_dt_CAMtoIMU->value()(0) - 0.10;
   }
-  propagator->feed_imu(message, oldest_time);
+  propagator->feedImu(message, oldest_time);
 
   // Feed the gyro to the feature tracker so it can predict the KLT seed under rotation.
   // No-op unless gyro-aided KLT was enabled at construction; cheap buffer push otherwise.
-  trackFEATS->feed_imu(message.timestamp, message.wm);
+  trackFEATS->feedImu(message.timestamp, message.wm);
 
   // Push back to our initializer
   if (!is_initialized_vio) {
-    initializer->feed_imu(message, oldest_time);
+    initializer->feedImu(message, oldest_time);
   }
 
   // Push back to the zero velocity updater if it is enabled
   // No need to push back if we are just doing the zv-update at the begining and we have moved
   if (is_initialized_vio && updaterZUPT != nullptr && (!params.zupt_only_at_beginning || !has_moved_since_zupt)) {
-    updaterZUPT->feed_imu(message, oldest_time);
+    updaterZUPT->feedImu(message, oldest_time);
   }
 }
 

@@ -69,7 +69,7 @@ public:
    * @brief Returns if we are actively simulating
    * @return True if we still have simulation data
    */
-  bool ok() { return is_running; }
+  bool ok() { return isRunning; }
 
   /**
    * @brief Gets the timestamp we have simulated up too
@@ -83,7 +83,7 @@ public:
    * @param imustate State in the MSCKF ordering: [time(sec),q_GtoI,p_IinG,v_IinG,b_gyro,b_accel]
    * @return True if we have a state
    */
-  bool get_state(double desired_time, Eigen::Matrix<double, 17, 1> &imustate);
+  bool getState(double desired_time, Eigen::Matrix<double, 17, 1> &imustate);
 
   /**
    * @brief Gets the next inertial reading if we have one.
@@ -174,7 +174,7 @@ protected:
   std::mt19937 gen_state_perturb;
 
   /// If our simulation is running
-  bool is_running;
+  bool isRunning;
 
   //===================================================================
   // Simulation specific variables

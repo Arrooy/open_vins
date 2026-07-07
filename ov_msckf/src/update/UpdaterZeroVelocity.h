@@ -74,7 +74,7 @@ public:
    * @param message Contains our timestamp and inertial information
    * @param oldest_time Time that we can discard measurements before
    */
-  void feed_imu(const ov_core::ImuData &message, double oldest_time = -1) {
+  void feedImu(const ov_core::ImuData &message, double oldest_time = -1) {
 
     // Append it to our vector
     imu_data.emplace_back(message);

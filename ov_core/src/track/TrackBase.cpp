@@ -43,7 +43,7 @@ TrackBase::TrackBase(std::unordered_map<size_t, std::shared_ptr<CamBase>> camera
   }
 }
 
-void TrackBase::feed_imu(double timestamp, const Eigen::Vector3d &wm) {
+void TrackBase::feedImu(double timestamp, const Eigen::Vector3d &wm) {
   std::lock_guard<std::mutex> lck(mtx_gyro);
   gyro_buffer.emplace_back(timestamp, wm);
   // Keep the buffer bounded: drop samples older than a couple seconds. We only ever

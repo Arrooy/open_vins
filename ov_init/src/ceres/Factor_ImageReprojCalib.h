@@ -48,7 +48,7 @@ public:
   Eigen::Matrix<double, 2, 2> sqrtQ;
 
   // If distortion model is fisheye or radtan
-  bool is_fisheye = false;
+  bool isFisheye = false;
 
   // If value of 1 then this residual adds to the problem, otherwise if zero it is "gated"
   double gate = 1.0;

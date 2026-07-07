@@ -109,7 +109,7 @@ public:
    * @param timestamp Sensor time of the reading (same clock as the camera timestamps)
    * @param wm Angular velocity in the IMU frame (rad/s)
    */
-  void feed_imu(double timestamp, const Eigen::Vector3d &wm);
+  void feedImu(double timestamp, const Eigen::Vector3d &wm);
 
   /**
    * @brief Enable gyro-aided KLT seeding and provide the IMU→camera rotations.

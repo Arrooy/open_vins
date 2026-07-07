@@ -52,7 +52,7 @@ InertialInitializer::InertialInitializer(InertialInitializerOptions &params_, st
 #endif
 }
 
-void InertialInitializer::feed_imu(const ov_core::ImuData &message, double oldest_time) {
+void InertialInitializer::feedImu(const ov_core::ImuData &message, double oldest_time) {
 
   // Append it to our vector
   imu_data->emplace_back(message);

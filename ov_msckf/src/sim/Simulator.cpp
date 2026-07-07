@@ -120,7 +120,7 @@ Simulator::Simulator(VioManagerOptions &params_) {
   hist_true_bias_gyro.push_back(true_bias_gyro);
 
   // Our simulation is running
-  is_running = true;
+  isRunning = true;
 
   //===============================================================
   //===============================================================
@@ -264,7 +264,7 @@ void Simulator::perturb_parameters(std::mt19937 gen_state, VioManagerOptions &pa
   }
 }
 
-bool Simulator::get_state(double desired_time, Eigen::Matrix<double, 17, 1> &imustate) {
+bool Simulator::getState(double desired_time, Eigen::Matrix<double, 17, 1> &imustate) {
 
   // Set to default state
   imustate.setZero();
@@ -332,7 +332,7 @@ bool Simulator::get_next_imu(double &time_imu, Eigen::Vector3d &wm, Eigen::Vecto
   // If failed, then that means we don't have any more spline
   // Thus we should stop the simulation
   if (!success_accel) {
-    is_running = false;
+    isRunning = false;
     return false;
   }
 
@@ -407,7 +407,7 @@ bool Simulator::get_next_cam(double &time_cam, std::vector<int> &camids,
 
   // We have finished generating measurements
   if (!success_pose) {
-    is_running = false;
+    isRunning = false;
     return false;
   }
 

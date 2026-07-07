@@ -105,7 +105,7 @@ public:
   VioManagerOptions get_params() { return params; }
 
   /// Accessor to get the current state
-  std::shared_ptr<State> get_state() { return state; }
+  std::shared_ptr<State> getState() { return state; }
 
   /// Accessor to get the current propagator
   std::shared_ptr<Propagator> get_propagator() { return propagator; }

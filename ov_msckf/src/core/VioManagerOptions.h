@@ -238,7 +238,7 @@ struct VioManagerOptions {
 
         // Distortion model
         std::string dist_model = "radtan";
-        parser->parse_external("relative_config_imucam", "cam" + std::to_string(i), "distortion_model", dist_model);
+        parser->parse_external("relative_config_imucam", "cam" + std::to_string(i), "distortionModel", dist_model);
 
         // Distortion parameters
         std::vector<double> cam_calib1 = {1, 1, 0, 0};

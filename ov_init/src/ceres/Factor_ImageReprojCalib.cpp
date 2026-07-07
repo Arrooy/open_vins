@@ -26,7 +26,7 @@
 using namespace ov_init;
 
 Factor_ImageReprojCalib::Factor_ImageReprojCalib(const Eigen::Vector2d &uv_meas_, double pix_sigma_, bool is_fisheye_)
-    : uv_meas(uv_meas_), pix_sigma(pix_sigma_), is_fisheye(is_fisheye_) {
+    : uv_meas(uv_meas_), pix_sigma(pix_sigma_), isFisheye(is_fisheye_) {
 
   // Square root information inverse
   sqrtQ = Eigen::Matrix<double, 2, 2>::Identity();
@@ -72,7 +72,7 @@ bool Factor_ImageReprojCalib::Evaluate(double const *const *parameters, double *
   // Also if jacobians are requested, then compute derivatives
   Eigen::Vector2d uv_dist;
   Eigen::MatrixXd H_dz_dzn, H_dz_dzeta;
-  if (is_fisheye) {
+  if (isFisheye) {
     ov_core::CamEqui cam(0, 0);
     cam.set_value(camera_vals);
     uv_dist = cam.distort_d(uv_norm);

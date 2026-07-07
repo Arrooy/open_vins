@@ -62,7 +62,7 @@ public:
    * @param message Contains our timestamp and inertial information
    * @param oldest_time Time that we can discard measurements before (in IMU clock)
    */
-  void feed_imu(const ov_core::ImuData &message, double oldest_time = -1) {
+  void feedImu(const ov_core::ImuData &message, double oldest_time = -1) {
 
     // Append it to our vector
     std::lock_guard<std::mutex> lck(imu_data_mtx);
