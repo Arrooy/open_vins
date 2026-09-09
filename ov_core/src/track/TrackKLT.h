@@ -50,11 +50,14 @@ public:
    * @param gridx size of grid in the x-direction / u-direction
    * @param gridy size of grid in the y-direction / v-direction
    * @param minpxdist features need to be at least this number pixels away from each other
+   * @param ransacpx epipolar RANSAC inlier threshold in PIXELS (converted to normalized
+   *                 coords internally by dividing by the focal length). Fork addition;
+   *                 upstream hard-coded this to 2.0. See @ref ransac_px.
    */
   explicit TrackKLT(std::unordered_map<size_t, std::shared_ptr<CamBase>> cameras, int numfeats, int numaruco, bool stereo,
-                    HistogramMethod histmethod, int fast_threshold, int gridx, int gridy, int minpxdist)
+                    HistogramMethod histmethod, int fast_threshold, int gridx, int gridy, int minpxdist, double ransacpx = 2.0)
       : TrackBase(cameras, numfeats, numaruco, stereo, histmethod), threshold(fast_threshold), grid_x(gridx), grid_y(gridy),
-        min_px_dist(minpxdist) {}
+        min_px_dist(minpxdist), ransac_px(ransacpx) {}
 
   /**
    * @brief Process a new image
@@ -138,6 +141,20 @@ protected:
 
   // Minimum pixel distance to be "far away enough" to be a different extracted feature
   int min_px_dist;
+
+  // Epipolar RANSAC inlier threshold, in pixels (divided by the focal length before use,
+  // since the RANSAC runs on normalized coords). Upstream OpenVINS hard-codes 2.0, which
+  // was tuned for narrow-FOV pinhole rigs (EuRoC). On a wide-FOV fisheye the undistortion
+  // amplifies peripheral residuals, and under fast rotation motion blur + the OV2640's
+  // rolling shutter add real correspondence error that no global two-view model absorbs --
+  // so 2.0 px rejects a majority of GOOD tracks exactly when you can least afford it.
+  // Measured on outputs/output_20260908_102856 (inlier % of KLT-surviving tracks):
+  //     rotation      2px    4px    8px
+  //     <1 deg/s     90.8   94.4   96.4
+  //     4-23 deg/s   71.5   78.5   84.2
+  //     52-190 d/s   39.8   48.8   58.3
+  // Raise with care: this is a pre-filter, the MSCKF/SLAM chi2 gates are the second line.
+  double ransac_px;
 
   // How many pyramid levels to track
   int pyr_levels = 5;

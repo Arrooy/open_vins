@@ -406,6 +406,13 @@ struct VioManagerOptions {
   /// no IMU is available for the interval. (Fork addition; off by default.)
   bool use_gyro_aided_klt = false;
 
+  /// Epipolar RANSAC inlier threshold in PIXELS for the KLT tracker's outlier rejection.
+  /// Upstream OpenVINS hard-codes 2.0 (tuned for narrow-FOV pinhole rigs); wide-FOV
+  /// fisheye + rolling-shutter cameras need it looser or good tracks are mass-rejected
+  /// under rotation. Default 2.0 preserves upstream behaviour. (Fork addition.)
+  /// See TrackKLT::ransac_px for the measured rotation-vs-inlier table.
+  double track_ransac_px = 2.0;
+
   /// If should extract aruco tags and estimate them
   bool use_aruco = true;
 
@@ -462,6 +469,7 @@ struct VioManagerOptions {
       parser->parse_config("use_stereo", use_stereo);
       parser->parse_config("use_klt", use_klt);
       parser->parse_config("use_gyro_aided_klt", use_gyro_aided_klt, false);
+      parser->parse_config("track_ransac_px", track_ransac_px, false);
       parser->parse_config("use_aruco", use_aruco);
       parser->parse_config("downsize_aruco", downsize_aruco);
       parser->parse_config("downsample_cameras", downsample_cameras);
@@ -495,6 +503,7 @@ struct VioManagerOptions {
     PRINT_DEBUG("  - use_stereo: %d\n", use_stereo);
     PRINT_DEBUG("  - use_klt: %d\n", use_klt);
     PRINT_DEBUG("  - use_gyro_aided_klt: %d\n", use_gyro_aided_klt);
+    PRINT_DEBUG("  - track_ransac_px: %.2f\n", track_ransac_px);
     PRINT_DEBUG("  - use_aruco: %d\n", use_aruco);
     PRINT_DEBUG("  - downsize aruco: %d\n", downsize_aruco);
     PRINT_DEBUG("  - downsize cameras: %d\n", downsample_cameras);
