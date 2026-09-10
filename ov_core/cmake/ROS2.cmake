@@ -31,6 +31,8 @@ list(APPEND thirdparty_libraries
 
 list(APPEND LIBRARY_SOURCES
         src/dummy.cpp
+        src/cam/CamEqui.cpp
+        src/cam/CamRadtan.cpp
         src/cpi/CpiV1.cpp
         src/cpi/CpiV2.cpp
         src/sim/BsplineSE3.cpp
