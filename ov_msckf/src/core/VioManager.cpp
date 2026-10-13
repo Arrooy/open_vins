@@ -205,6 +205,13 @@ void VioManager::feed_measurement_imu(const ov_core::ImuData &message) {
   }
 }
 
+void VioManager::set_zupt_velocity_reset(bool enabled, double sigma_mps) {
+  if (updaterZUPT != nullptr) {
+    updaterZUPT->reset_velocity = enabled;
+    updaterZUPT->reset_velocity_sigma = sigma_mps;
+  }
+}
+
 void VioManager::feed_measurement_simulation(double timestamp, const std::vector<int> &camids,
                                              const std::vector<std::vector<std::pair<size_t, Eigen::VectorXf>>> &feats) {
 
@@ -235,7 +242,8 @@ void VioManager::feed_measurement_simulation(double timestamp, const std::vector
   // Check if we should do zero-velocity, if so update the state with it
   // Note that in the case that we only use in the beginning initialization phase
   // If we have since moved, then we should never try to do a zero velocity update!
-  if (is_initialized_vio && updaterZUPT != nullptr && (!params.zupt_only_at_beginning || !has_moved_since_zupt)) {
+  if (is_initialized_vio && updaterZUPT != nullptr && zupt_enabled.load() &&
+      (!params.zupt_only_at_beginning || !has_moved_since_zupt)) {
     // If the same state time, use the previous timestep decision
     if (state->_timestamp != timestamp) {
       did_zupt_update = updaterZUPT->try_update(state, timestamp);
@@ -308,7 +316,8 @@ void VioManager::track_image_and_update(const ov_core::CameraData &message_const
   // Check if we should do zero-velocity, if so update the state with it
   // Note that in the case that we only use in the beginning initialization phase
   // If we have since moved, then we should never try to do a zero velocity update!
-  if (is_initialized_vio && updaterZUPT != nullptr && (!params.zupt_only_at_beginning || !has_moved_since_zupt)) {
+  if (is_initialized_vio && updaterZUPT != nullptr && zupt_enabled.load() &&
+      (!params.zupt_only_at_beginning || !has_moved_since_zupt)) {
     // If the same state time, use the previous timestep decision
     if (state->_timestamp != message.timestamp) {
       did_zupt_update = updaterZUPT->try_update(state, message.timestamp);

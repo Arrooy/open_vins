@@ -98,6 +98,11 @@ public:
   /// If we are initialized or not
   bool initialized() { return is_initialized_vio && timelastupdate != -1; }
 
+  /// True once the initializer has succeeded, even if no filter update has run yet. initialized() additionally needs
+  /// timelastupdate != -1, which only do_feature_propagate_update() sets - and that is skipped on every frame an accepted
+  /// ZUPT handles, so a platform that sits still after init never satisfies initialized().
+  bool vio_init_done() const { return is_initialized_vio; }
+
   /// Timestamp that the system was initialized at
   double initialized_time() { return startup_time; }
 
@@ -109,6 +114,25 @@ public:
 
   /// Accessor to get the current propagator
   std::shared_ptr<Propagator> get_propagator() { return propagator; }
+
+  /// Runtime switch for the zero-velocity updater (thread-safe). When disabled try_update() is never called, so a
+  /// stationary-looking IMU/disparity can no longer clamp the velocity (e.g. while the vehicle is airborne).
+  /// The IMU buffer keeps being fed so re-enabling takes effect immediately.
+  void set_zupt_enabled(bool enabled) { zupt_enabled.store(enabled); }
+  bool zupt_is_enabled() const { return zupt_enabled.load(); }
+
+  /// Make accepted ZUPTs also zero the velocity state (see UpdaterZeroVelocity::reset_velocity). Off by default.
+  void set_zupt_velocity_reset(bool enabled, double sigma_mps = 0.05);
+
+  /// Number of features the front-end tracker currently tracks in `cam_id` (last processed frame). Independent of
+  /// whether the filter used them: unlike get_good_features_MSCKF()/SLAM it is not emptied by an accepted ZUPT.
+  int get_num_tracked_features(size_t cam_id = 0) {
+    if (trackFEATS == nullptr)
+      return 0;
+    auto ids = trackFEATS->get_last_ids();
+    auto it = ids.find(cam_id);
+    return it == ids.end() ? 0 : static_cast<int>(it->second.size());
+  }
 
   /// Get a nice visualization image of what tracks we have
   cv::Mat get_historical_viz_image();
@@ -228,6 +252,9 @@ protected:
   // If we did a zero velocity update
   bool did_zupt_update = false;
   bool has_moved_since_zupt = false;
+
+  /// Runtime ZUPT gate, see set_zupt_enabled()
+  std::atomic<bool> zupt_enabled{true};
 
   // Good features that where used in the last update (used in visualization)
   std::vector<Eigen::Vector3d> good_features_MSCKF;

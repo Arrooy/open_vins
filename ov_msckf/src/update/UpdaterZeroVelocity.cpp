@@ -274,6 +274,12 @@ bool UpdaterZeroVelocity::try_update(std::shared_ptr<State> state, double timest
 
     // Finally move the state time forward
     StateHelper::EKFUpdate(state, Hx_order, H, res, R);
+    if (reset_velocity) {
+      Eigen::MatrixXd Hv = Eigen::MatrixXd::Identity(3, 3);
+      Eigen::VectorXd rv = -state->_imu->vel();
+      Eigen::MatrixXd Rv = Eigen::MatrixXd::Identity(3, 3) * (reset_velocity_sigma * reset_velocity_sigma);
+      StateHelper::EKFUpdate(state, {state->_imu->v()}, Hv, rv, Rv);
+    }
     state->_timestamp = timestamp;
 
   } else {

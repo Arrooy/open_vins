@@ -54,6 +54,13 @@ class Propagator;
 class UpdaterZeroVelocity {
 
 public:
+
+  /// If true, an accepted ZUPT also pulls the velocity state toward zero (sigma `reset_velocity_sigma` m/s). Upstream's
+  /// non-explicit ZUPT only freezes the pose (no propagation) and updates orientation/biases, so a velocity error that
+  /// got into the state (hand lift, vibration-biased accel) is kept and resumes integrating the moment one frame is
+  /// not accepted - on a hovering camera there is no parallax for vision to ever remove it.
+  bool reset_velocity = false;
+  double reset_velocity_sigma = 0.05;
   /**
    * @brief Default constructor for our zero velocity detector and updater.
    * @param options Updater options (chi2 multiplier)
